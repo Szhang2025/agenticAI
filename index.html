@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build an Agentic AI System for Data Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#f6f8fa; --panel:#fff; --ink:#14213d; --muted:#5b6b7f; --line:#d5dde6; --accent:#0f7b8a; --soft:#e4f2f4; --code:#101b2e; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; scroll-padding-top:16px; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.65 "IBM Plex Sans", system-ui, sans-serif; }
+  .wrap { max-width:1060px; margin:0 auto; padding:0 16px; display:grid; grid-template-columns:200px minmax(0,1fr); gap:40px; }
+  @media (max-width:820px){ .wrap { grid-template-columns:1fr; gap:0; } nav { position:static !important; padding:12px 0 0; } }
+  header { padding:40px 16px 8px; max-width:1060px; margin:0 auto; }
+  h1 { font-size:2.1rem; line-height:1.2; margin:0 0 10px; max-width:20ch; }
+  header p { margin:0; max-width:62ch; color:var(--muted); }
+  nav { position:sticky; top:16px; align-self:start; padding-top:32px; font-size:.95rem; }
+  nav a { display:block; padding:4px 0; color:var(--muted); text-decoration:none; }
+  nav a:hover { color:var(--accent); }
+  main { padding:24px 0 64px; max-width:720px; }
+  section { margin-bottom:44px; }
+  h2 { font-size:1.4rem; margin:0 0 8px; }
+  p, li { max-width:68ch; }
+  code { font:.88em "IBM Plex Mono", monospace; background:var(--soft); padding:1px 5px; border-radius:4px; }
+  .codebox { position:relative; margin:14px 0; }
+  pre { margin:0; background:var(--code); color:#dfe9f5; padding:14px 16px; border-radius:8px; overflow-x:auto; font:13.5px/1.55 "IBM Plex Mono", monospace; }
+  pre code { background:none; padding:0; font-size:inherit; }
+  .copy { position:absolute; top:8px; right:8px; font:inherit; font-size:.8rem; padding:3px 10px; border-radius:5px; border:1px solid #3a4b66; background:#1b2a41; color:#dfe9f5; cursor:pointer; }
+  .fname { font:12.5px "IBM Plex Mono", monospace; color:var(--muted); margin:14px 0 -8px; }
+  .note { border-left:4px solid var(--accent); background:var(--soft); padding:10px 14px; border-radius:0 6px 6px 0; margin:14px 0; }
+  :focus-visible { outline:3px solid #7cc4cf; outline-offset:2px; }
+
+  /* loop demo */
+  .demo { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin:16px 0; }
+  .roles { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .role { flex:1 1 120px; text-align:center; padding:6px 8px; border:1px solid var(--line); border-radius:6px; color:var(--muted); font-size:.9rem; }
+  .role.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  #stepBody { min-height:150px; white-space:pre-wrap; font:13.5px/1.55 "IBM Plex Mono", monospace; background:#f1f5f8; border-radius:6px; padding:12px; overflow-x:auto; }
+  .ctrl { display:flex; gap:8px; align-items:center; margin-top:12px; }
+  .ctrl button { font:inherit; padding:6px 14px; border-radius:6px; border:1px solid var(--accent); background:#fff; color:var(--accent); cursor:pointer; font-weight:600; }
+  .ctrl button.primary { background:var(--accent); color:#fff; }
+  .ctrl button:disabled { opacity:.4; cursor:default; }
+  #count { margin-left:auto; color:var(--muted); font-size:.9rem; }
+  table { border-collapse:collapse; width:100%; font-size:.95rem; margin:12px 0; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Build an agentic AI system for data analysis</h1>
+  <p>An agent is a language model in a loop: it chooses an action, a tool runs it, and the result goes back to the model until the job is done. This guide builds one that analyzes your CSV files, in about 100 lines of Python.</p>
+</header>
+
+<div class="wrap">
+<nav aria-label="Sections">
+  <a href="#idea">1. The idea</a>
+  <a href="#setup">2. Set up</a>
+  <a href="#tools">3. Define tools</a>
+  <a href="#loop">4. Write the loop</a>
+  <a href="#prompt">5. System prompt</a>
+  <a href="#guard">6. Guardrails</a>
+  <a href="#eval">7. Test it</a>
+  <a href="#ship">8. Put it online</a>
+  <a href="#auto">9. Automate it</a>
+  <a href="#gloss">10. Glossary</a>
+</nav>
+
+<main>
+<section id="idea">
+  <h2>1. The idea</h2>
+  <p>A normal chatbot answers once. An agent keeps going. Step through a sample run below to see the loop: the model decides, a tool acts, and the result returns to the model.</p>
+  <div class="demo" aria-live="polite">
+    <div class="roles" id="roles">
+      <div class="role" data-r="0">Model decides</div>
+      <div class="role" data-r="1">Tool runs</div>
+      <div class="role" data-r="2">Result returns</div>
+    </div>
+    <div id="stepBody"></div>
+    <div class="ctrl">
+      <button id="back">Back</button>
+      <button id="next" class="primary">Next step</button>
+      <button id="reset">Restart</button>
+      <span id="count"></span>
+    </div>
+  </div>
+  <p>Everything else in this guide supports that loop: tools give the model abilities, the system prompt gives it habits, and guardrails keep it safe and affordable.</p>
+</section>
+
+<section id="setup">
+  <h2>2. Set up</h2>
+  <p>You need Python 3.10+, a CSV file, and an Anthropic API key from console.anthropic.com. Create a folder, a virtual environment, and install the packages.</p>
+  <div class="fname">Windows PowerShell</div>
+  <div class="codebox"><pre><code>mkdir agent; cd agent
+python -m venv venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+venv\Scripts\Activate.ps1
+pip install anthropic pandas numpy matplotlib scipy statsmodels
+$env:ANTHROPIC_API_KEY="your-key-here"</code></pre></div>
+  <div class="fname">Mac / Linux</div>
+  <div class="codebox"><pre><code>mkdir agent &amp;&amp; cd agent
+python3 -m venv venv
+source venv/bin/activate
+pip install anthropic pandas numpy matplotlib scipy statsmodels
+export ANTHROPIC_API_KEY="your-key-here"</code></pre></div>
+  <div class="note">Never put your API key inside a file you will upload to GitHub. Keep it in an environment variable.</div>
+</section>
+
+<section id="tools">
+  <h2>3. Define tools</h2>
+  <p>Tools are the agent's hands. Start with two. Clear names and descriptions matter more than anything else here, because the model reads them to decide what to call.</p>
+  <table>
+    <tr><th>Tool</th><th>What it does</th></tr>
+    <tr><td><code>inspect_data</code></td><td>Loads the CSV into <code>df</code> and reports shape, column types, missing values, and the first rows, so the model never guesses column names.</td></tr>
+    <tr><td><code>run_python</code></td><td>Runs code in a namespace that persists between calls, so later steps build on earlier ones. Errors return as text and the model usually fixes its own bug.</td></tr>
+  </table>
+  <p>Each entry in <code>TOOLS</code> has three fields: <code>name</code> (the label the model uses to ask for it), <code>description</code> (plain English the model reads to decide <em>when</em> to use it), and <code>input_schema</code> (the arguments it takes). Inside the schema, <code>"properties": {"path": {"type": "string"}}</code> means "one argument called <code>path</code>, and it is text," while <code>"required": ["path"]</code> says the model must supply it.</p>
+  <p>The model never runs anything itself. It replies with a request such as <code>{"name": "run_python", "input": {"code": "print(1)"}}</code>, your code runs the matching function with <code>**input</code> (which turns the dictionary into named arguments), and you send the output back as a tool result.</p>
+  <div class="fname">data_analysis_agent.py (part 1)</div>
+  <div class="codebox"><pre><code>import contextlib, io, sys, traceback
+import anthropic, pandas as pd, numpy as np
+
+client = anthropic.Anthropic()
+MODEL = "claude-sonnet-4-6"
+MAX_STEPS = 20
+MAX_CHARS = 4000
+NAMESPACE = {"pd": pd, "np": np}
+
+TOOLS = [
+  {"name": "inspect_data",
+   "description": "Load a CSV into `df`; return shape, dtypes, missing counts, head.",
+   "input_schema": {"type": "object",
+     "properties": {"path": {"type": "string"}}, "required": ["path"]}},
+  {"name": "run_python",
+   "description": "Run Python with persistent state (pd, np, df). Use print().",
+   "input_schema": {"type": "object",
+     "properties": {"code": {"type": "string"}}, "required": ["code"]}},
+]
+
+def trunc(s):
+    return s if len(s) &lt;= MAX_CHARS else s[:MAX_CHARS] + "\n...[truncated]"
+
+def inspect_data(path):
+    df = pd.read_csv(path)
+    NAMESPACE["df"] = df
+    return trunc(f"shape: {df.shape}\n{df.dtypes}\n{df.isna().sum()}\n{df.head().to_string()}")
+
+def run_python(code):
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            exec(code, NAMESPACE)
+    except Exception:
+        return trunc(buf.getvalue() + traceback.format_exc())
+    return trunc(buf.getvalue()) or "(no output; use print())"</code></pre></div>
+  <div class="note">Running model-written code with <code>exec</code> is risky on a machine you care about. Use Google Colab, a container, or run it in the browser (see step 8).</div>
+</section>
+
+<section id="loop">
+  <h2>4. Write the loop</h2>
+  <p>This is the whole agent. Send the conversation, run any tool the model asks for, append the results, and repeat. Stop when the model answers without requesting a tool, or when you hit the step limit.</p>
+  <div class="fname">data_analysis_agent.py (part 2)</div>
+  <div class="codebox"><pre><code>def run_tool(name, args):
+    # Dispatcher: pick the Python function matching the tool name
+    if name == "inspect_data":
+        return inspect_data(**args)
+    if name == "run_python":
+        return run_python(**args)
+    return f"Unknown tool: {name}"   # the model reads this and can correct itself
+
+def analyze(path, question):
+    messages = [{"role": "user",
+                 "content": f"Dataset: {path}\nQuestion: {question}"}]
+    for step in range(MAX_STEPS):
+        resp = client.messages.create(
+            model=MODEL, max_tokens=4000,
+            system=SYSTEM_PROMPT, tools=TOOLS, messages=messages)
+        messages.append({"role": "assistant", "content": resp.content})
+
+        if resp.stop_reason != "tool_use":
+            return "".join(b.text for b in resp.content if b.type == "text")
+
+        results = []
+        for b in resp.content:
+            if b.type == "tool_use":
+                print(f"[step {step+1}] {b.name}")
+                results.append({"type": "tool_result",
+                                "tool_use_id": b.id,
+                                "content": run_tool(b.name, b.input)})
+        messages.append({"role": "user", "content": results})
+    return "Stopped: step limit reached."
+
+if __name__ == "__main__":
+    print(analyze(sys.argv[1], sys.argv[2]))</code></pre></div>
+  <p>Run it with <code>python data_analysis_agent.py data.csv "Which variables best predict price?"</code> and watch the step trail print as it works.</p>
+</section>
+
+<section id="prompt">
+  <h2>5. System prompt</h2>
+  <p>The system prompt sets the agent's habits. For data analysis, the most valuable instructions are the ones a careful statistician would follow anyway. Define <code>SYSTEM_PROMPT</code> above <code>analyze</code>.</p>
+  <div class="codebox"><pre><code>SYSTEM_PROMPT = """You are a careful data analyst working in Python.
+1. Call inspect_data first. Never guess column names or types.
+2. Check missing values, duplicates and outliers before modeling.
+3. Use run_python for all computation. The dataset is `df`.
+   Print concise summaries, never whole tables.
+4. Report effect sizes and uncertainty, not just p-values.
+   Distinguish association from causation.
+5. If the data cannot support a conclusion, say so plainly.
+6. Finish with a short answer: findings, key numbers, assumptions, caveats."""</code></pre></div>
+</section>
+
+<section id="guard">
+  <h2>6. Guardrails</h2>
+  <p>Agents act on their own, so set limits before you share one.</p>
+  <ul>
+    <li><b>Step cap.</b> <code>MAX_STEPS</code> stops runaway loops and runaway bills.</li>
+    <li><b>Output truncation.</b> One huge printed table can flood the model's context window.</li>
+    <li><b>Sandboxing.</b> Execute code somewhere disposable, with no network access and no private files.</li>
+    <li><b>Spending limit.</b> Set a monthly cap in the Anthropic Console.</li>
+    <li><b>Human approval.</b> If you later add tools that send email or modify data, require a confirmation first.</li>
+    <li><b>Untrusted content.</b> Text inside a dataset or web page can contain instructions. Treat tool output as data, never as commands.</li>
+  </ul>
+</section>
+
+<section id="eval">
+  <h2>7. Test it</h2>
+  <p>You cannot improve what you cannot measure. Build a small test set before tuning anything.</p>
+  <ol>
+    <li>Collect 10 to 20 questions on datasets where you already know the right answer.</li>
+    <li>Plant problems in a few: duplicate rows, a wild outlier, a column that leaks the answer.</li>
+    <li>Run the agent on all of them and record how often it is correct and how often it notices the planted problem.</li>
+    <li>Read the step trails of the failures. Usually the fix is a clearer tool description or one more line in the system prompt.</li>
+    <li>Re-run the full set after every change so you know the change helped.</li>
+  </ol>
+</section>
+
+<section id="ship">
+  <h2>8. Put it online</h2>
+  <p>GitHub Pages only hosts static files and cannot keep an API key secret, so the safe pattern has three parts:</p>
+  <ul>
+    <li><b>A web page on GitHub Pages</b> holds the interface and runs the loop in the browser.</li>
+    <li><b>Pyodide</b> (Python compiled to WebAssembly) runs the <code>run_python</code> tool in the visitor's browser, so their data never leaves their computer and nothing needs sandboxing on your side.</li>
+    <li><b>A Google Apps Script proxy</b> stores your API key, checks an access code, enforces a daily call cap, and forwards each request to the Anthropic API.</li>
+  </ul>
+  <p>Whatever you deploy, set the spending limit first, keep the daily cap low while testing, and share the access code privately.</p>
+</section>
+<section id="auto">
+  <h2>9. Automate it</h2>
+  <p>Once started, the loop already runs by itself. What is left to automate is the setup and the starting. Three small steps cover it.</p>
+  <p><b>One-click launcher.</b> A <code>.bat</code> file is a text file of Windows commands that run in order when you double-click it. Save this as <code>run.bat</code> in your agent folder (it uses <code>activate.bat</code>, which avoids the PowerShell permission error):</p>
+  <div class="codebox"><pre><code>@echo off
+cd /d %~dp0
+if not exist venv python -m venv venv
+call venv\Scripts\activate.bat
+pip install -q anthropic pandas numpy matplotlib scipy statsmodels
+python run_all.py</code></pre></div>
+  <p>Store your API key permanently once, then open a new terminal: <code>setx ANTHROPIC_API_KEY "your-key-here"</code></p>
+  <p><b>Batch runner.</b> Save as <code>run_all.py</code>. It analyzes every CSV in an <code>inbox</code> folder, writes a report to <code>reports</code>, and skips files already done:</p>
+  <div class="codebox"><pre><code>import glob, os
+from data_analysis_agent import analyze
+
+os.makedirs("reports", exist_ok=True)
+for path in glob.glob("inbox/*.csv"):
+    out = f"reports/{os.path.splitext(os.path.basename(path))[0]}.md"
+    if os.path.exists(out):
+        continue
+    report = analyze(path, "Check data quality, then report the most important patterns.")
+    open(out, "w", encoding="utf-8").write(report)</code></pre></div>
+  <p><b>Schedule it.</b> Windows Task Scheduler can run the launcher daily (the computer must be on and logged in):</p>
+  <div class="codebox"><pre><code>schtasks /create /tn "DataAgent" /tr "C:\path\to\agent\run.bat" /sc daily /st 07:00</code></pre></div>
+  <div class="note">Unattended runs still spend API credit and execute model-written code. Keep the spending limit and step cap in place, only feed it files you trust, and read the first several reports before relying on them.</div>
+</section>
+
+<section id="gloss">
+  <h2>10. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>JSON</td><td>A plain-text format for structured data: objects <code>{ }</code> of key-value pairs, arrays <code>[ ]</code>, strings, numbers, <code>true</code>/<code>false</code>, and <code>null</code>. Tool definitions and all API traffic use it. Python dictionaries and lists map directly onto it.</td></tr>
+    <tr><td>f-string</td><td>A string starting with <code>f</code> where <code>{value}</code> is replaced by that value: <code>f"Dataset: {path}"</code>. Use <code>f"""..."""</code> for several lines. Literal braces must be doubled: <code>{{</code>.</td></tr>
+    <tr><td><code>**args</code></td><td>Unpacks a dictionary into named arguments, so <code>f(**{"code": "x"})</code> equals <code>f(code="x")</code>.</td></tr>
+    <tr><td>Type hints</td><td>Optional notes like <code>name: str</code> and <code>-&gt; str</code>. Python ignores them when running, so you can leave them out.</td></tr>
+    <tr><td>Trailing comma</td><td>A comma after the last item in a list or dictionary. Python allows it; strict JSON does not.</td></tr>
+    <tr><td>Virtual environment</td><td>A private copy of Python for one project (<code>python -m venv venv</code>), so its packages stay separate from everything else.</td></tr>
+    <tr><td><code>.bat</code> file</td><td>A Windows text file of commands that runs when you double-click it.</td></tr>
+  </table>
+</section>
+</main>
+</div>
+
+<script>
+// Loop demo
+const STEPS = [
+  { r:0, t:"Goal: Which variables best predict house price?\n\nModel thinks: I should look at the data before doing anything." },
+  { r:0, t:"Model calls a tool:\n  inspect_data(path=\"houses.csv\")" },
+  { r:1, t:"Tool runs and returns:\n  shape: (545, 6)\n  columns: price, area, bedrooms, bathrooms, stories, parking\n  missing: parking has 12 empty values" },
+  { r:2, t:"Result goes back to the model, which now knows the real column names.\n\nModel thinks: parking has missing values; check them and the correlations next." },
+  { r:0, t:"Model calls a tool:\n  run_python(code=\"print(df.corr()['price'].sort_values())\")" },
+  { r:1, t:"Tool runs and returns:\n  bedrooms 0.37\n  stories  0.42\n  area     0.54" },
+  { r:0, t:"Model calls a tool:\n  run_python(code=\"fit regression of price on all predictors; print summary\")" },
+  { r:2, t:"Result goes back: R-squared 0.68, area and bathrooms have the largest effects.\n\nModel thinks: I have enough to answer, and no more tools are needed." },
+  { r:0, t:"Final answer (no tool requested, so the loop ends):\n\nArea and bathrooms are the strongest predictors; the model explains about 68% of price variation. Association only, not causation. 12 rows with missing parking were dropped." }
+];
+let i = 0;
+const body = document.getElementById("stepBody"), cnt = document.getElementById("count");
+const nextB = document.getElementById("next"), backB = document.getElementById("back");
+function show() {
+  body.textContent = STEPS[i].t;
+  document.querySelectorAll(".role").forEach(el => el.classList.toggle("on", Number(el.dataset.r) === STEPS[i].r));
+  cnt.textContent = (i + 1) + " / " + STEPS.length;
+  backB.disabled = i === 0; nextB.disabled = i === STEPS.length - 1;
+}
+nextB.onclick = () => { if (i < STEPS.length - 1) { i++; show(); } };
+backB.onclick = () => { if (i > 0) { i--; show(); } };
+document.getElementById("reset").onclick = () => { i = 0; show(); };
+show();
+
+// Copy buttons
+document.querySelectorAll(".codebox").forEach(box => {
+  const btn = document.createElement("button");
+  btn.className = "copy"; btn.textContent = "Copy"; btn.type = "button";
+  btn.onclick = async () => {
+    const text = box.querySelector("code").innerText;
+    try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
+    catch (e) { btn.textContent = "Select and copy"; }
+    setTimeout(() => btn.textContent = "Copy", 1500);
+  };
+  box.appendChild(btn);
+});
+</script>
+</body>
+</html>
