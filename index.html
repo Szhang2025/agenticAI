@@ -94,14 +94,19 @@
   <h2><span class="en">2. Set up</span><span class="zh">2. 环境准备</span></h2>
   <p><span class="en">You need Python 3.10+, a CSV file, and an Anthropic API key from console.anthropic.com. Create a folder, a virtual environment, and install the packages.</span><span class="zh">你需要 Python 3.10 以上版本、一个 CSV 文件，以及来自 console.anthropic.com 的 Anthropic API 密钥。创建一个文件夹和虚拟环境，然后安装所需的包。</span></p>
   <div class="fname">Windows PowerShell</div>
-  <div class="codebox"><pre><code>mkdir agent; cd agent
+  <div class="codebox"><pre><code>
+mkdir agent
+cd agent
 python -m venv venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 venv\Scripts\Activate.ps1
 pip install anthropic pandas numpy matplotlib scipy statsmodels
-$env:ANTHROPIC_API_KEY="your-key-here"</code></pre></div>
+$env:ANTHROPIC_API_KEY="your-key-here" (Note: no space after colon!!!)
+  </code></pre></div>
   <div class="fname">Mac / Linux</div>
-  <div class="codebox"><pre><code>mkdir agent &amp;&amp; cd agent
+  <div class="codebox"><pre><code>
+mkdir agent
+cd agent
 python3 -m venv venv
 source venv/bin/activate
 pip install anthropic pandas numpy matplotlib scipy statsmodels
