@@ -66,8 +66,9 @@
   <a href="#guard"><span class="en">6. Guardrails</span><span class="zh">6. 安全护栏</span></a>
   <a href="#eval"><span class="en">7. Test it</span><span class="zh">7. 测试</span></a>
   <a href="#ship"><span class="en">8. Put it online</span><span class="zh">8. 上线部署</span></a>
-  <a href="#auto"><span class="en">9. Automate it</span><span class="zh">9. 自动化</span></a>
-  <a href="#gloss"><span class="en">10. Glossary</span><span class="zh">10. 术语表</span></a>
+  <a href="#gemini"><span class="en">9. Use Gemini</span><span class="zh">9. 改用 Gemini</span></a>
+  <a href="#auto"><span class="en">10. Automate it</span><span class="zh">10. 自动化</span></a>
+  <a href="#gloss"><span class="en">11. Glossary</span><span class="zh">11. 术语表</span></a>
 </nav>
 
 <main>
@@ -94,19 +95,14 @@
   <h2><span class="en">2. Set up</span><span class="zh">2. 环境准备</span></h2>
   <p><span class="en">You need Python 3.10+, a CSV file, and an Anthropic API key from console.anthropic.com. Create a folder, a virtual environment, and install the packages.</span><span class="zh">你需要 Python 3.10 以上版本、一个 CSV 文件，以及来自 console.anthropic.com 的 Anthropic API 密钥。创建一个文件夹和虚拟环境，然后安装所需的包。</span></p>
   <div class="fname">Windows PowerShell</div>
-  <div class="codebox"><pre><code>
-mkdir agent
-cd agent
+  <div class="codebox"><pre><code>mkdir agent; cd agent
 python -m venv venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 venv\Scripts\Activate.ps1
 pip install anthropic pandas numpy matplotlib scipy statsmodels
-$env:ANTHROPIC_API_KEY="your-key-here" (Note: no space after colon!!!)
-  </code></pre></div>
+$env:ANTHROPIC_API_KEY="your-key-here"</code></pre></div>
   <div class="fname">Mac / Linux</div>
-  <div class="codebox"><pre><code>
-mkdir agent
-cd agent
+  <div class="codebox"><pre><code>mkdir agent &amp;&amp; cd agent
 python3 -m venv venv
 source venv/bin/activate
 pip install anthropic pandas numpy matplotlib scipy statsmodels
@@ -252,8 +248,56 @@ if __name__ == "__main__":
   </ul>
   <p><span class="en">Whatever you deploy, set the spending limit first, keep the daily cap low while testing, and share the access code privately.</span><span class="zh">无论部署在哪里，都要先设置消费上限，测试期间把每日调用上限调低，并私下分享访问口令。</span></p>
 </section>
+<section id="gemini">
+  <h2><span class="en">9. Use Gemini instead</span><span class="zh">9. 改用 Gemini</span></h2>
+  <p><span class="en">The same agent works with Google's Gemini API. The loop idea is identical; what changes is the package, the way tools are declared, and who runs the loop.</span><span class="zh">同一个智能体也可以使用 Google 的 Gemini API。循环的思路完全一样，变化的只是所用的包、声明工具的方式，以及由谁来运行循环。</span></p>
+  <p><span class="en">Install the <code>google-genai</code> package (imported with <code>from google import genai</code>). The older <code>google-generativeai</code> package still appears in many tutorials, but Google says new features are built in the new SDK. Create a key in Google AI Studio.</span><span class="zh">安装 <code>google-genai</code> 包（导入方式为 <code>from google import genai</code>）。许多教程里仍然出现旧的 <code>google-generativeai</code> 包，但 Google 表示新功能都在新的 SDK 中开发。请在 Google AI Studio 创建密钥。</span></p>
+  <div class="fname">Windows PowerShell</div>
+  <div class="codebox"><pre><code>pip install google-genai pandas numpy matplotlib scipy statsmodels
+$env:GEMINI_API_KEY="your-key-here"</code></pre></div>
+  <p><span class="en"><b>What changes compared with the Claude version:</b></span><span class="zh"><b>与 Claude 版本相比的变化：</b></span></p>
+  <ul>
+    <li><span class="en"><b>Package:</b> <code>google-genai</code> replaces <code>anthropic</code>.</span><span class="zh"><b>包：</b>用 <code>google-genai</code> 取代 <code>anthropic</code>。</span></li>
+    <li><span class="en"><b>Tools:</b> no <code>TOOLS</code> list. You pass plain Python functions, and the SDK builds the schema from each function's name, type hints and docstring.</span><span class="zh"><b>工具：</b>不再需要 <code>TOOLS</code> 列表。直接传入普通 Python 函数，SDK 会根据函数名、类型提示和文档字符串生成 schema。</span></li>
+    <li><span class="en"><b>Loop:</b> automatic function calling is the default. The SDK runs your function when the model asks and sends the result back until the model answers.</span><span class="zh"><b>循环：</b>自动函数调用是默认行为：SDK 会在模型请求时运行你的函数，并把结果送回去，直到模型作答。</span></li>
+    <li><span class="en"><b>Step cap:</b> <code>MAX_STEPS</code> becomes <code>maximum_remote_calls</code>.</span><span class="zh"><b>步数上限：</b><code>MAX_STEPS</code> 变成 <code>maximum_remote_calls</code>。</span></li>
+    <li><span class="en"><b>Dispatcher:</b> <code>run_tool</code> is no longer needed, because the SDK does that job.</span><span class="zh"><b>调度函数：</b>不再需要 <code>run_tool</code>，因为 SDK 已经代劳。</span></li>
+  </ul>
+  <div class="fname">data_analysis_agent_gemini.py</div>
+  <div class="codebox"><pre><code>import os
+from google import genai
+from google.genai import types
+
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+MODEL = "gemini-3.5-flash"   # check Google's model list for current names
+
+def inspect_data(path: str) -> str:
+    """Load a CSV into df; return shape, dtypes, missing counts, head."""
+    ...                      # same body as before
+
+def run_python(code: str) -> str:
+    """Run Python with persistent state (pd, np, df). Use print()."""
+    ...                      # same body as before
+
+def analyze(path, question):
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        tools=[inspect_data, run_python],        # plain functions
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(
+            maximum_remote_calls=MAX_STEPS),
+    )
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=f"Dataset: {path}\nQuestion: {question}",
+        config=config)
+    return response.text</code></pre></div>
+  <div class="note"><span class="en">Docstrings now do the job of the <code>description</code> field, so write them carefully. To watch each step, turn automatic calling off with <code>AutomaticFunctionCallingConfig(disable=True)</code> and run the loop yourself. The complete script is <code>data_analysis_agent_gemini.py</code>.</span><span class="zh">文档字符串现在承担了 <code>description</code> 字段的作用，所以要认真地写。如果想看到每一步，可以用 <code>AutomaticFunctionCallingConfig(disable=True)</code> 关闭自动调用，自己来运行循环。完整脚本是 <code>data_analysis_agent_gemini.py</code>。</span></div>
+  <p><span class="en"><b>Web version.</b> The Apps Script proxy calls <code>generativelanguage.googleapis.com</code> with your key in the <code>x-goog-api-key</code> header. Tools are declared as <code>functionDeclarations</code>, the model asks for a tool with a <code>functionCall</code>, and you answer with a <code>functionResponse</code>. Send the model's reply parts back unchanged, because they carry its reasoning signatures.</span><span class="zh"><b>网页版。</b>Apps Script 代理改为调用 <code>generativelanguage.googleapis.com</code>，并在 <code>x-goog-api-key</code> 请求头中带上密钥。工具用 <code>functionDeclarations</code> 声明，模型通过 <code>functionCall</code> 请求工具，你用 <code>functionResponse</code> 回复。要把模型返回的各部分原样发回去，因为其中带有推理签名。</span></p>
+  <div class="note"><span class="en">Model names change, so check Google's model list. Set spending or quota limits in Google's console, not Anthropic's.</span><span class="zh">模型名称会变化，请查看 Google 的模型列表。请在 Google 的控制台（而不是 Anthropic 的）中设置消费或配额上限。</span></div>
+</section>
+
 <section id="auto">
-  <h2><span class="en">9. Automate it</span><span class="zh">9. 自动化</span></h2>
+  <h2><span class="en">10. Automate it</span><span class="zh">10. 自动化</span></h2>
   <p><span class="en">Once started, the loop already runs by itself. What is left to automate is the setup and the starting. Three small steps cover it.</span><span class="zh">一旦启动，循环本身就会自动运行。剩下需要自动化的是准备和启动。三个小步骤即可搞定。</span></p>
   <p><span class="en"><b>One-click launcher.</b> A <code>.bat</code> file is a text file of Windows commands that run in order when you double-click it. Save this as <code>run.bat</code> in your agent folder (it uses <code>activate.bat</code>, which avoids the PowerShell permission error):</span><span class="zh"><b>一键启动器。</b><code>.bat</code> 文件是一个包含 Windows 命令的文本文件，双击后会按顺序执行。把下面的内容保存为智能体文件夹中的 <code>run.bat</code>（它使用 <code>activate.bat</code>，可避开 PowerShell 的权限错误）：</span></p>
   <div class="codebox"><pre><code>@echo off
@@ -280,7 +324,7 @@ for path in glob.glob("inbox/*.csv"):
 </section>
 
 <section id="gloss">
-  <h2><span class="en">10. Glossary</span><span class="zh">10. 术语表</span></h2>
+  <h2><span class="en">11. Glossary</span><span class="zh">11. 术语表</span></h2>
   <table>
     <tr><th><span class="en">Term</span><span class="zh">术语</span></th><th><span class="en">Meaning</span><span class="zh">含义</span></th></tr>
     <tr><td>JSON</td><td><span class="en">A plain-text format for structured data: objects <code>{ }</code> of key-value pairs, arrays <code>[ ]</code>, strings, numbers, <code>true</code>/<code>false</code>, and <code>null</code>. Tool definitions and all API traffic use it. Python dictionaries and lists map directly onto it.</span><span class="zh">一种用于结构化数据的纯文本格式：由键值对组成的对象 <code>{ }</code>、数组 <code>[ ]</code>、字符串、数字、<code>true</code>/<code>false</code> 和 <code>null</code>。工具定义和所有 API 通信都使用它。Python 的字典和列表可以直接对应它。</span></td></tr>
