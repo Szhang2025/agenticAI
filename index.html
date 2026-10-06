@@ -47,6 +47,8 @@
   html[lang="zh-CN"] .en, html[lang="en"] .zh { display:none; }
   html[lang="zh-CN"] h1, html[lang="zh-CN"] p, html[lang="zh-CN"] li { max-width:none; }
   .lang { position:fixed; top:12px; right:12px; z-index:5; font:inherit; font-size:.9rem; font-weight:600; padding:6px 14px; border:1px solid var(--accent); background:#fff; color:var(--accent); border-radius:6px; cursor:pointer; }
+  h3 { font-size:1.15rem; margin:28px 0 8px; color:var(--accent); }
+  .tbl { overflow-x:auto; }
 </style>
 </head>
 <body>
@@ -89,20 +91,37 @@
     </div>
   </div>
   <p><span class="en">Everything else in this guide supports that loop: tools give the model abilities, the system prompt gives it habits, and guardrails keep it safe and affordable.</span><span class="zh">本指南的其余内容都是为这个循环服务的：工具赋予模型能力，系统提示词塑造它的习惯，安全护栏让它保持安全且花费可控。</span></p>
+  <h3><span class="en">Agent or direct prompt?</span><span class="zh">智能体还是直接提示？</span></h3>
+  <p><span class="en">Before building, it helps to know what an agent adds. With direct prompting, <b>you</b> drive: you ask, the AI answers once, and you decide the next step. With an agent, <b>the AI</b> drives: you give it a goal, and it decides the steps, uses tools, checks the results, and continues until it finishes or hits a limit.</span><span class="zh">构建之前，先弄清楚智能体多了什么。直接提示时由<b>你</b>主导：你提问，AI 回答一次，下一步由你决定。使用智能体时由 <b>AI</b> 主导：你给出目标，它自己决定步骤、使用工具、检查结果，并持续工作，直到完成或达到上限。</span></p>
+  <p><span class="en"><b>Example.</b> With direct prompting, you paste a summary of your data and ask what predicts price; if the AI needs to check missing values, you notice, ask, and paste more. You are the loop. With an agent, you hand over the CSV and the same question, and it inspects the file, runs a correlation, fits a regression, fixes its own code when it errors, and writes up the findings.</span><span class="zh"><b>例子。</b>直接提示时，你粘贴一份数据摘要，问什么能预测价格；如果 AI 需要检查缺失值，得由你发现、追问、再粘贴更多内容。你自己就是那个循环。使用智能体时，你交出 CSV 和同样的问题，它会检查文件、计算相关性、拟合回归、在代码报错时自行修复，并写出结论。</span></p>
+  <div class="tbl"><table>
+    <tr><th><span class="en">Aspect</span><span class="zh">方面</span></th><th><span class="en">Direct prompting</span><span class="zh">直接提示</span></th><th><span class="en">Agent</span><span class="zh">智能体</span></th></tr>
+      <tr><td><b><span class="en">Control</span><span class="zh">控制</span></b></td><td><span class="en">You choose every step</span><span class="zh">每一步由你决定</span></td><td><span class="en">The model chooses the steps within limits you set</span><span class="zh">模型在你设定的限制内决定步骤</span></td></tr>
+      <tr><td><b><span class="en">Tools</span><span class="zh">工具</span></b></td><td><span class="en">Text only</span><span class="zh">只有文本</span></td><td><span class="en">Can run code, read files, search the web, call other systems</span><span class="zh">可以运行代码、读取文件、搜索网页、调用其他系统</span></td></tr>
+      <tr><td><b><span class="en">Feedback</span><span class="zh">反馈</span></b></td><td><span class="en">Works only from what you tell it</span><span class="zh">只能依据你告诉它的内容</span></td><td><span class="en">Sees real results (output, errors) and adapts</span><span class="zh">能看到真实结果（输出、错误）并据此调整</span></td></tr>
+      <tr><td><b><span class="en">Length of task</span><span class="zh">任务长度</span></b></td><td><span class="en">Single questions and drafts</span><span class="zh">单个问题和草稿</span></td><td><span class="en">Multi-step jobs that would otherwise need many messages</span><span class="zh">否则需要许多来回消息的多步骤任务</span></td></tr>
+      <tr><td><b><span class="en">Effort from you</span><span class="zh">你的投入</span></b></td><td><span class="en">Steady attention</span><span class="zh">需要持续关注</span></td><td><span class="en">Setup first (tools, prompt, guardrails), then runs on its own</span><span class="zh">先搭建（工具、提示词、护栏），之后自行运行</span></td></tr>
+  </table></div>
+  <p><span class="en"><b>Trade-offs.</b> Agents are not simply better. They cost more (many model calls per task), can make a wrong early decision and build on it, and can take real actions such as running code, so they need guardrails (see step 6). Direct prompting is cheaper, easier to control, and often enough when you want to review each step yourself.</span><span class="zh"><b>取舍。</b>智能体并不一定更好。它们成本更高（每个任务要多次调用模型），可能早早做出错误决定并在此基础上继续，还能执行运行代码这类真实操作，因此需要护栏（见第 6 步）。直接提示更便宜、更容易控制，当你想亲自检查每一步时往往就够用了。</span></p>
+  <div class="note"><span class="en"><b>Rule of thumb:</b> use direct prompting for a single question or when you want to steer closely. Use an agent when the task has many steps, needs real tools or data, and you can verify the final result.</span><span class="zh"><b>经验法则：</b>单个问题，或想紧密把控时，用直接提示。任务步骤多、需要真实工具或数据、且你能核验最终结果时，用智能体。</span></div>
 </section>
 
 <section id="setup">
   <h2><span class="en">2. Set up</span><span class="zh">2. 环境准备</span></h2>
   <p><span class="en">You need Python 3.10+, a CSV file, and an Anthropic API key from console.anthropic.com. Create a folder, a virtual environment, and install the packages.</span><span class="zh">你需要 Python 3.10 以上版本、一个 CSV 文件，以及来自 console.anthropic.com 的 Anthropic API 密钥。创建一个文件夹和虚拟环境，然后安装所需的包。</span></p>
   <div class="fname">Windows PowerShell</div>
-  <div class="codebox"><pre><code>mkdir agent; cd agent
+  <div class="codebox"><pre><code>
+mkdir agent
+cd agent
 python -m venv venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 venv\Scripts\Activate.ps1
 pip install anthropic pandas numpy matplotlib scipy statsmodels
 $env:ANTHROPIC_API_KEY="your-key-here"</code></pre></div>
   <div class="fname">Mac / Linux</div>
-  <div class="codebox"><pre><code>mkdir agent &amp;&amp; cd agent
+  <div class="codebox"><pre><code>
+mkdir agent
+cd agent
 python3 -m venv venv
 source venv/bin/activate
 pip install anthropic pandas numpy matplotlib scipy statsmodels
