@@ -110,18 +110,16 @@
   <h2><span class="en">2. Set up</span><span class="zh">2. 环境准备</span></h2>
   <p><span class="en">You need Python 3.10+, a CSV file, and an Anthropic API key from console.anthropic.com. Create a folder, a virtual environment, and install the packages.</span><span class="zh">你需要 Python 3.10 以上版本、一个 CSV 文件，以及来自 console.anthropic.com 的 Anthropic API 密钥。创建一个文件夹和虚拟环境，然后安装所需的包。</span></p>
   <div class="fname">Windows PowerShell</div>
-  <div class="codebox"><pre><code>
-mkdir agent
-cd agent
+  <div class="codebox"><pre><code>mkdir agent
+    cd agent
 python -m venv venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 venv\Scripts\Activate.ps1
 pip install anthropic pandas numpy matplotlib scipy statsmodels
 $env:ANTHROPIC_API_KEY="your-key-here"</code></pre></div>
   <div class="fname">Mac / Linux</div>
-  <div class="codebox"><pre><code>
-mkdir agent
-cd agent
+  <div class="codebox"><pre><code>mkdir agent
+    cd agent
 python3 -m venv venv
 source venv/bin/activate
 pip install anthropic pandas numpy matplotlib scipy statsmodels
@@ -262,7 +260,7 @@ if __name__ == "__main__":
   <p><span class="en">GitHub Pages only hosts static files and cannot keep an API key secret, so the safe pattern has three parts:</span><span class="zh">GitHub Pages 只托管静态文件，无法保密 API 密钥，所以安全的做法包含三部分：</span></p>
   <ul>
     <li><span class="en"><b>A web page on GitHub Pages</b> holds the interface and runs the loop in the browser.</span><span class="zh"><b>GitHub Pages 上的网页</b>承载界面，并在浏览器中运行循环。</span></li>
-    <li><span class="en"><b>Pyodide</b> (Python compiled to WebAssembly) runs the <code>run_python</code> tool in the visitor's browser, so their data never leaves their computer and nothing needs sandboxing on your side.</span><span class="zh"><b>Pyodide</b>（编译为 WebAssembly 的 Python）在访问者的浏览器中运行 <code>run_python</code> 工具，因此他们的数据不会离开自己的电脑，你这边也无需做沙箱。</span></li>
+    <li><span class="en"><b>Pyodide</b> (Python compiled to WebAssembly) runs the <code>run_python</code> tool in the visitor's browser, so the file itself stays in their browser (only the summaries your code prints are sent to the model) and nothing needs sandboxing on your side.</span><span class="zh"><b>Pyodide</b>（编译为 WebAssembly 的 Python）在访问者的浏览器中运行 <code>run_python</code> 工具，因此文件本身留在他们的浏览器中（只有代码打印出的摘要会发送给模型），你这边也无需做沙箱。</span></li>
     <li><span class="en"><b>A Google Apps Script proxy</b> stores your API key, checks an access code, enforces a daily call cap, and forwards each request to the Anthropic API.</span><span class="zh"><b>Google Apps Script 代理</b>保存你的 API 密钥，检查访问口令，限制每日调用次数，并把每个请求转发给 Anthropic API。</span></li>
   </ul>
   <p><span class="en">Whatever you deploy, set the spending limit first, keep the daily cap low while testing, and share the access code privately.</span><span class="zh">无论部署在哪里，都要先设置消费上限，测试期间把每日调用上限调低，并私下分享访问口令。</span></p>
